@@ -7,3 +7,4 @@ data/Pix3D
 output
 **ckpt
 examples/pred**
+dataset/*

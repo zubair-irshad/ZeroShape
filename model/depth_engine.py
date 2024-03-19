@@ -1,7 +1,7 @@
 import numpy as np
 import os, time, datetime
 import torch
-import torch.utils.tensorboard
+# import torch.utils.tensorboard
 import importlib
 import shutil
 import utils.util as util
@@ -13,6 +13,7 @@ from utils.util import EasyDict as edict
 from utils.eval_depth import DepthMetric
 from copy import deepcopy
 from model.compute_graph import graph_depth
+import wandb
 
 # ============================ main engine for training and evaluation ============================
 
@@ -29,6 +30,7 @@ class Runner():
                 if "embedding" in filename: shutil.rmtree(os.path.join(opt.output_path, filename))
         if opt.device == 0: 
             os.makedirs(opt.output_path,exist_ok=True)
+            wandb.init(project="zero_shape_depth_estimation")
         setup(opt.device, opt.world_size, opt.port)
         opt.batch_size = opt.batch_size // opt.world_size
     
@@ -118,8 +120,8 @@ class Runner():
     def setup_visualizer(self, opt, test=False):
         if opt.device == 0: 
             print("setting up visualizers...")
-            if opt.tb:
-                self.tb = torch.utils.tensorboard.SummaryWriter(log_dir=opt.output_path, flush_secs=10)
+            # if opt.tb:
+            #     self.tb = torch.utils.tensorboard.SummaryWriter(log_dir=opt.output_path, flush_secs=10)
     
     def train(self, opt):
         # before training
@@ -142,9 +144,9 @@ class Runner():
             self.train_epoch(opt)
         # after training
         if opt.device == 0: self.save_checkpoint(opt, ep=self.ep, it=self.it, best_val=self.best_val, best_ep=self.best_ep)
-        if opt.tb and opt.device == 0:
-            self.tb.flush()
-            self.tb.close()
+        # if opt.tb and opt.device == 0:
+        #     self.tb.flush()
+        #     self.tb.close()
         if opt.device == 0: 
             print("TRAINING DONE")
             print("Best val: %.4f @ epoch %d" % (self.best_val, self.best_ep))
@@ -397,10 +399,12 @@ class Runner():
             metric = dict(L1_ERR=sample_metrics['l1_err'].mean().item())
         for key, value in loss.items():
             if key=="all": continue
-            self.tb.add_scalar("{0}/loss_{1}".format(split, key), value.mean(), step)
+            # self.tb.add_scalar("{0}/loss_{1}".format(split, key), value.mean(), step)
+            wandb.log({"{0}/loss_{1}".format(split, key): value.mean()}, step=step)
         if metric is not None:
             for key, value in metric.items():
-                self.tb.add_scalar("{0}/{1}".format(split, key), value, step)
+                # self.tb.add_scalar("{0}/{1}".format(split, key), value, step)
+                wandb.log({"{0}/{1}".format(split, key): value}, step=step)
 
     @torch.no_grad()
     def visualize(self, opt, var, step=0, split="train"):

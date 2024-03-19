@@ -14,7 +14,7 @@ class Dataset(base.Dataset):
             split = "val"
         
         super().__init__(opt, split)
-        self.path = "data/train_data"
+        self.path = "/data/train_data"
         self.load_3D = load_3D
         self.subsets = opt.data.synthetic.subset.split(',')
         self.category_dict = {}

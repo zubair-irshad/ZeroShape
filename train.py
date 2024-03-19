@@ -35,10 +35,11 @@ def main():
         os.makedirs(os.path.dirname(opt.arch.depth.pretrained), exist_ok=True)
         os.system("wget -O {} https://www.dropbox.com/s/bua998sjhdizn6b/omnidata_dpt_depth_v2.ckpt?dl=0".format(opt.arch.depth.pretrained))
 
-    port = (os.getpid() % 32000) + 32768
+    port = (os.getpid() % 3200) + 32768
     while is_port_in_use(port):
         port += 1
     world_size = torch.cuda.device_count()
+    print("World size: ", world_size)
     if world_size == 1:
         main_worker(0, world_size, port, opt)
     else:

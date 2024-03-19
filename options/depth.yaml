@@ -2,7 +2,7 @@ group: depth
 name: depth_est
 load: 
 
-batch_size: 128
+batch_size: 44
 debug: false
 image_size: [224,224]
 gpu: 0
@@ -17,7 +17,7 @@ arch:
         pretrained: model/depth/pretrained_weights/omnidata_dpt_depth_v2.ckpt
 
 eval:
-    batch_size: 128
+    batch_size: 44
     n_vis: 50
     depth_cap: 
     d_thresholds: [1.02,1.05,1.1,1.2]

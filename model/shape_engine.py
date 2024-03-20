@@ -321,10 +321,6 @@ class Runner():
                 wandb.log({"pointcloud compare train": [wandb.Object3D(seen_surface_pcds[i])]})
             
             # pcds_pred = utils_vis.get_meshes_pcd_wandb(opt, "mesh_pred", var_viz.dpc_pred)
-
-            pcds_pred = var_viz.dpc_pred
-            for i in range(len(pcds_pred)):
-                wandb.log({"mesh_pred": [wandb.Object3D(pcds_pred[i])]})
             
             if 'depth_pred' in var_viz:
                 # util_vis.dump_depths(opt, var_viz.idx, "depth_est", var_viz.depth_pred, var_viz.mask_input_map, rescale=True, folder=vis_folder)

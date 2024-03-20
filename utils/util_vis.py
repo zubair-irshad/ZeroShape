@@ -157,7 +157,7 @@ def get_vis_depths(opt, idx, name, depths, masks=None, rescale=False):
         # depth_pil = Image.fromarray((depth_vis*255).astype(np.uint8))
 
         colormap = plt.get_cmap('viridis')
-        rgba_image = colormap(depth.squeeze())
+        rgba_image = colormap(depth_pred.squeeze())
 
         # Convert to PIL image
         depth_pil = Image.fromarray((rgba_image[:, :, :3] * 255).astype('uint8'))

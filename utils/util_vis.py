@@ -152,9 +152,16 @@ def get_vis_depths(opt, idx, name, depths, masks=None, rescale=False):
 
     depths_all = []
     for i, depth_pred in zip(idx, depths):
-        depth_vis = depth2inv(depth_pred.squeeze().unsqueeze(0).unsqueeze(0))
-        depth_vis = viz_inv_depth(depth_vis)
-        depth_pil = Image.fromarray((depth_vis*255).astype(np.uint8))
+        # depth_vis = depth2inv(depth_pred.squeeze().unsqueeze(0).unsqueeze(0))
+        # depth_vis = viz_inv_depth(depth_vis)
+        # depth_pil = Image.fromarray((depth_vis*255).astype(np.uint8))
+
+        colormap = plt.get_cmap('viridis')
+        rgba_image = colormap(depth.squeeze())
+
+        # Convert to PIL image
+        depth_pil = Image.fromarray((rgba_image[:, :, :3] * 255).astype('uint8'))
+
         depths_all.append(depth_pil)
     return depths_all
 

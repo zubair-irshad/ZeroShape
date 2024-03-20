@@ -111,7 +111,7 @@ def get_wandb_image(opt, name, images, masks=None, num_vis=None, from_range=(0, 
     image_grid = torchvision.utils.make_grid(images[:, :3], nrow=num_W, pad_value=1.)
     if images.shape[1]==4:
         mask_grid = torchvision.utils.make_grid(images[:, 3:], nrow=num_W, pad_value=1.)[:1]
-    image_grid = torch.cat([image_grid, mask_grid], dim=0)
+        image_grid = torch.cat([image_grid, mask_grid], dim=0)
 
     return image_grid
     # tag = "{0}/{1}".format(group, name)

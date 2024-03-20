@@ -2,7 +2,7 @@ group: shape
 name: shape_recon
 load: 
 
-batch_size: 64
+batch_size: 128
 debug: false
 profile: false
 image_size: [224,224]

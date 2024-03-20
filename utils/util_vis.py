@@ -14,6 +14,64 @@ import copy
 import base64
 import io
 import imageio
+from matplotlib.cm import get_cmap
+
+def is_tensor(data):
+    """Checks if data is a torch tensor."""
+    return type(data) == torch.Tensor
+
+def depth2inv(depth):
+    """
+    Invert a depth map to produce an inverse depth map
+    Parameters
+    ----------
+    depth : torch.Tensor or list of torch.Tensor [B,1,H,W]
+        Depth map
+    Returns
+    -------
+    inv_depth : torch.Tensor or list of torch.Tensor [B,1,H,W]
+        Inverse depth map
+    """
+    inv_depth = 1. / depth.clamp(min=1e-6)
+    inv_depth[depth <= 0.] = 0.
+    return inv_depth
+
+def viz_inv_depth(inv_depth, normalizer=None, percentile=95,
+                  colormap='plasma', filter_zeros=False):
+    """
+    Converts an inverse depth map to a colormap for visualization.
+    Parameters
+    ----------
+    inv_depth : torch.Tensor [B,1,H,W]
+        Inverse depth map to be converted
+    normalizer : float
+        Value for inverse depth map normalization
+    percentile : float
+        Percentile value for automatic normalization
+    colormap : str
+        Colormap to be used
+    filter_zeros : bool
+        If True, do not consider zero values during normalization
+    Returns
+    -------
+    colormap : np.array [H,W,3]
+        Colormap generated from the inverse depth map
+    """
+    # If a tensor is provided, convert to numpy
+    if is_tensor(inv_depth):
+        inv_depth = inv_depth.squeeze(0).squeeze(0)
+        # Squeeze if depth channel exists
+        # if len(inv_depth.shape) == 3:
+        #     inv_depth = inv_depth.squeeze(0)
+        inv_depth = inv_depth.detach().cpu().numpy()
+    print("inv_depth", inv_depth.shape)
+    cm = get_cmap(colormap)
+    if normalizer is None:
+        normalizer = np.percentile(
+            inv_depth[inv_depth > 0] if filter_zeros else inv_depth, percentile)
+    inv_depth /= (normalizer + 1e-6)
+    print("inv depth", inv_depth.shape)
+    return cm(np.clip(inv_depth, 0., 1.0))[:, :, :3]
 
 os.environ['PYOPENGL_PLATFORM'] = 'egl'
 @torch.no_grad()
@@ -87,6 +145,25 @@ def get_vis_images(opt, idx, name, images, masks=None, from_range=(0, 1), poses=
     #     fname = "{}/{}/{}_{}.png".format(opt.output_path, folder, i, name)
     #     img = Image.fromarray((img*255).astype(np.uint8))
         # img.save(fname)
+
+def get_vis_depths(opt, idx, name, depths, masks=None, rescale=False):
+    if rescale:
+        masks = (masks > 0.5).float()
+        depths = depths * masks + (1 - masks) * ((depths * masks).max())
+    depths = (1 - depths).detach().cpu()
+
+    depths_all = []
+    for i, depth_pred in zip(idx, depths):
+
+        depth_vis = depth2inv(depth_pred.squeeze().unsqueeze(0).unsqueeze(0))
+        depth_vis = viz_inv_depth(depth_vis)
+        depth_pil = Image.fromarray((depth_vis*255).astype(np.uint8))
+
+        depths_all.append(depth_pil)
+    return depths_all
+
+        # fname = "{}/{}/{}_{}.png".format(opt.output_path, folder, i, name)
+        # plt.imsave(fname, depth.squeeze(), cmap='viridis')
 
 def dump_depths(opt, idx, name, depths, masks=None, rescale=False, folder='dump'):
     if rescale:

@@ -2,7 +2,7 @@ group: shape
 name: shape_recon
 load: 
 
-batch_size: 28
+batch_size: 64
 debug: false
 profile: false
 image_size: [224,224]
@@ -44,7 +44,7 @@ arch:
         skip_in: [2,4,6]
 
 eval:
-    batch_size: 2
+    batch_size: 8
     brute_force: false
     n_vis: 50
     vox_res: 64

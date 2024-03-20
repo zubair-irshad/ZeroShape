@@ -73,7 +73,28 @@ def viz_inv_depth(inv_depth, normalizer=None, percentile=95,
 
 os.environ['PYOPENGL_PLATFORM'] = 'egl'
 @torch.no_grad()
-def tb_image(opt, tb, step, group, name, images, masks=None, num_vis=None, from_range=(0, 1), poses=None, cmap="gray", depth=False):
+# def tb_image(opt, tb, step, group, name, images, masks=None, num_vis=None, from_range=(0, 1), poses=None, cmap="gray", depth=False):
+#     if not depth:
+#         images = preprocess_vis_image(opt, images, masks=masks, from_range=from_range, cmap=cmap) # [B, 3, H, W]
+#     else:
+#         masks = (masks > 0.5).float()
+#         images = images * masks + (1 - masks) * ((images * masks).max())
+#         images = (1 - images).detach().cpu()
+#     num_H, num_W = num_vis or opt.tb.num_images
+#     images = images[:num_H*num_W]
+#     if poses is not None:
+#         # poses: [B, 3, 4]
+#         # rots: [max(B, num_images), 3, 3]
+#         rots = poses[:num_H*num_W, ..., :3]
+#         images = torch.stack([draw_pose(opt, image, rot, size=20, width=2) for image, rot in zip(images, rots)], dim=0)
+#     image_grid = torchvision.utils.make_grid(images[:, :3], nrow=num_W, pad_value=1.)
+#     if images.shape[1]==4:
+#         mask_grid = torchvision.utils.make_grid(images[:, 3:], nrow=num_W, pad_value=1.)[:1]
+#         image_grid = torch.cat([image_grid, mask_grid], dim=0)
+#     tag = "{0}/{1}".format(group, name)
+#     tb.add_image(tag, image_grid, step)
+
+def get_wandb_image(opt, name, images, masks=None, num_vis=None, from_range=(0, 1), poses=None, cmap="gray", depth=False):
     if not depth:
         images = preprocess_vis_image(opt, images, masks=masks, from_range=from_range, cmap=cmap) # [B, 3, H, W]
     else:
@@ -90,9 +111,11 @@ def tb_image(opt, tb, step, group, name, images, masks=None, num_vis=None, from_
     image_grid = torchvision.utils.make_grid(images[:, :3], nrow=num_W, pad_value=1.)
     if images.shape[1]==4:
         mask_grid = torchvision.utils.make_grid(images[:, 3:], nrow=num_W, pad_value=1.)[:1]
-        image_grid = torch.cat([image_grid, mask_grid], dim=0)
-    tag = "{0}/{1}".format(group, name)
-    tb.add_image(tag, image_grid, step)
+    image_grid = torch.cat([image_grid, mask_grid], dim=0)
+
+    return image_grid
+    # tag = "{0}/{1}".format(group, name)
+    # tb.add_image(tag, image_grid, step)
 
 def preprocess_vis_image(opt, images, masks=None, from_range=(0, 1), cmap="gray"):
     min, max = from_range

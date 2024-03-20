@@ -1,7 +1,7 @@
 import numpy as np
 import os, time, datetime
 import torch
-import torch.utils.tensorboard
+# import torch.utils.tensorboard
 import torch.profiler
 import importlib
 import shutil
@@ -153,13 +153,13 @@ class Runner():
     def setup_visualizer(self, opt, test=False):
         if opt.device == 0: 
             print("setting up visualizers...")
-            if opt.tb:
-                if test == False:
-                    self.tb = torch.utils.tensorboard.SummaryWriter(log_dir=opt.output_path, flush_secs=10)
-                else:
-                    embedding_folder = os.path.join(opt.output_path, 'embedding')
-                    os.makedirs(embedding_folder, exist_ok=True)
-                    self.tb = torch.utils.tensorboard.SummaryWriter(log_dir=embedding_folder, flush_secs=10)
+            # if opt.tb:
+            #     if test == False:
+            #         self.tb = torch.utils.tensorboard.SummaryWriter(log_dir=opt.output_path, flush_secs=10)
+            #     else:
+            #         embedding_folder = os.path.join(opt.output_path, 'embedding')
+            #         os.makedirs(embedding_folder, exist_ok=True)
+            #         self.tb = torch.utils.tensorboard.SummaryWriter(log_dir=embedding_folder, flush_secs=10)
     
     def train(self, opt):
         # before training
@@ -180,9 +180,9 @@ class Runner():
             self.train_epoch(opt)
         # after training
         if opt.device == 0: self.save_checkpoint(opt, ep=self.ep, it=self.it, best_val=self.best_val, best_ep=self.best_ep)
-        if opt.tb and opt.device == 0:
-            self.tb.flush()
-            self.tb.close()
+        # if opt.tb and opt.device == 0:
+        #     self.tb.flush()
+        #     self.tb.close()
         if opt.device == 0: 
             print("TRAINING DONE")
             print("Best CD: %.4f @ epoch %d" % (self.best_val, self.best_ep))
@@ -282,7 +282,7 @@ class Runner():
         self.train_metric_logger.update(loss=loss.all)
         if opt.device == 0: 
             self.graph.eval()
-            # if (self.it) % opt.freq.vis == 0: self.visualize(opt, var, step=self.it, split="train")
+            if (self.it) % opt.freq.vis == 0: self.visualize(opt, var, split="train")
             if (self.it) % opt.freq.ckpt_latest == 0 and not opt.debug: 
                 self.save_checkpoint(opt, ep=self.ep, it=self.it, best_val=self.best_val, best_ep=self.best_ep, latest=True)
             if (self.it) % opt.freq.scalar == 0 and not opt.debug: 
@@ -529,36 +529,70 @@ class Runner():
             metric = dict(dist_acc=dist_acc, dist_cov=dist_cov)
         for key, value in loss.items():
             if key=="all": continue
-            self.tb.add_scalar("{0}/loss_{1}".format(split, key), value.mean(), step)
+            # self.tb.add_scalar("{0}/loss_{1}".format(split, key), value.mean(), step)
+            wandb.log({"{0}/loss_{1}".format(split, key): value.mean()})
         if metric is not None:
             for key, value in metric.items():
-                self.tb.add_scalar("{0}/{1}".format(split, key), value, step)
+                wandb.log({"{0}/{1}".format(split, key): value})
+                # self.tb.add_scalar("{0}/{1}".format(split, key), value, step)
         # log the attention average values
         if 'attn_geo_avg' in var:
-            self.tb.add_scalar("{0}/attn_geo_avg".format(split), var.attn_geo_avg, step)
+            # self.tb.add_scalar("{0}/attn_geo_avg".format(split), var.attn_geo_avg, step)
+            wandb.log({"{0}/attn_geo_avg".format(split): var.attn_geo_avg})
         if 'attn_geo_seen' in var:
-            self.tb.add_scalar("{0}/attn_geo_seen".format(split), var.attn_geo_seen, step)
+            # self.tb.add_scalar("{0}/attn_geo_seen".format(split), var.attn_geo_seen, step)
+            wandb.log({"{0}/attn_geo_seen".format(split): var.attn_geo_seen})
         if 'attn_geo_occl' in var:
-            self.tb.add_scalar("{0}/attn_geo_occl".format(split), var.attn_geo_occl, step)
+            wandb.log({"{0}/attn_geo_occl".format(split): var.attn_geo_occl})
+            # self.tb.add_scalar("{0}/attn_geo_occl".format(split), var.attn_geo_occl, step)
         if 'attn_geo_bg' in var:
-            self.tb.add_scalar("{0}/attn_geo_bg".format(split), var.attn_geo_bg, step)
+            wandb.log({"{0}/attn_geo_bg".format(split): var.attn_geo_bg})
+            # self.tb.add_scalar("{0}/attn_geo_bg".format(split), var.attn_geo_bg, step)
 
     @torch.no_grad()
-    def visualize(self, opt, var, step=0, split="train"):
+    def visualize(self, opt, var, split="train"):
         if 'pose_input' in var:
             pose_input = var.pose_input
         elif 'pose_gt' in var:
             pose_input = var.pose_gt
         else:
             pose_input = None
-        util_vis.tb_image(opt, self.tb, step, split, "image_input_map", var.rgb_input_map, masks=None, from_range=(0, 1), poses=pose_input)
-        util_vis.tb_image(opt, self.tb, step, split, "image_input_map_est", var.rgb_input_map, masks=None, from_range=(0, 1), 
-                          poses=var.pose_pred if 'pose_pred' in var else var.pose)
-        util_vis.tb_image(opt, self.tb, step, split, "mask_input_map", var.mask_input_map)
+
+        # imgs_input = util_vis.get_vis_images(opt, var.idx, "image_input", var.rgb_input_map, masks=None, from_range=(0, 1), poses=pose_input)
+        # imgs_pred = util_vis.get_vis_images(opt, var.idx, "image_input_map_est", var.rgb_input_map, masks=None, from_range=(0, 1), poses=var.pose_pred if 'pose_pred' in var else var.pose)
+
+        # for i in range(len(imgs_input)):
+        #     input_name = "image_input"+_split
+        #     pred_name = "image_pred"+_split
+        #     wandb.log({input_name: [wandb.Image(imgs_input[i])], pred_name: [wandb.Image(imgs_input[i])]})
+
+        
+        input_grid = util_vis.get_wandb_image(opt, "image_input_map", var.rgb_input_map, masks=None, from_range=(0, 1), poses=pose_input)
+        pred_grid = util_vis.get_wandb_image(opt, "image_input_map_est", var.rgb_input_map, masks=None, from_range=(0, 1), poses=var.pose_pred if 'pose_pred' in var else var.pose)
+
+
+        wandb.log({"image_input": wandb.Image(input_grid)})
+        wandb.log({"image_pred": wandb.Image(pred_grid)})
+        
+        
+
+        # util_vis.tb_image(opt, self.tb, step, split, "image_input_map", var.rgb_input_map, masks=None, from_range=(0, 1), poses=pose_input)
+        # util_vis.tb_image(opt, self.tb, step, split, "image_input_map_est", var.rgb_input_map, masks=None, from_range=(0, 1), 
+        #                   poses=var.pose_pred if 'pose_pred' in var else var.pose)
+
+        # imgs_mask = util_vis.get_vis_images(opt, var_viz.idx, "mask_input_map", var_viz.mask_input_map)
+        # util_vis.tb_image(opt, self.tb, step, split, "mask_input_map", var.mask_input_map)
+        mask_grid = util_vis.get_wandb_image(opt, "mask_input_map", var.mask_input_map)
+        wandb.log({"mask_input": wandb.Image(mask_grid)})
+
         if 'depth_pred' in var:
-            util_vis.tb_image(opt, self.tb, step, split, "depth_est_map", var.depth_pred)
+            # util_vis.tb_image(opt, self.tb, step, split, "depth_est_map", var.depth_pred)
+            depth_grid = util_vis.get_wandb_image(opt, "depth_est_map", var.depth_pred)
+            wandb.log({"depth_est": wandb.Image(depth_grid)})
         if 'depth_input_map' in var:
-            util_vis.tb_image(opt, self.tb, step, split, "depth_input_map", var.depth_input_map)
+            # util_vis.tb_image(opt, self.tb, step, split, "depth_input_map", var.depth_input_map)
+            depth_input_grid = util_vis.get_wandb_image(opt, "depth_input_map", var.depth_input_map)
+            wandb.log({"depth_input": wandb.Image(depth_input_grid)})
 
     @torch.no_grad()
     def dump_results(self, opt, var, ep, write_new=False, train=False):

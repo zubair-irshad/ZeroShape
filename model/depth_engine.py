@@ -246,12 +246,24 @@ class Runner():
             var_viz = self.graph.module(opt, var_viz, training=False, get_loss=False)
             vis_folder = "vis_log/iter_{}".format(self.it)
             os.makedirs("{}/{}".format(opt.output_path, vis_folder), exist_ok=True)
-            util_vis.dump_images(opt, var_viz.idx, "image_input", var_viz.rgb_input_map, masks=None, from_range=(0, 1), folder=vis_folder)
-            util_vis.dump_images(opt, var_viz.idx, "mask_input", var_viz.mask_input_map, folder=vis_folder)
-            util_vis.dump_depths(opt, var_viz.idx, "depth_est", var_viz.depth_pred, var_viz.mask_input_map, rescale=True, folder=vis_folder)
-            util_vis.dump_depths(opt, var_viz.idx, "depth_input", var_viz.depth_input_map, var_viz.mask_input_map, rescale=True, folder=vis_folder)
+
+            imgs_input = util_vis.get_vis_images(opt, var_viz.idx, "image_input", var_viz.rgb_input_map, masks=None, from_range=(0, 1))
+            imgs_mask = util_vis.get_vis_images(opt, var_viz.idx, "mask_input", var_viz.mask_input_map)
+            imgs_depth_pred = util_vis.get_vis_depths(opt, var_viz.idx, "depth_pred", var_viz.depth_pred, var_viz.mask_input_map, rescale=True)
+            imgs_depth_input = util_vis.get_vis_depths(opt, var_viz.idx, "depth_input", var_viz.depth_input_map, var_viz.mask_input_map, rescale=True)
+
+            for i in range(len(imgs_input)):
+                wandb.log({"image_input": [wandb.Image(imgs_input[i])], "mask_input": [wandb.Image(imgs_mask[i])], "depth_pred": [wandb.Image(imgs_depth_pred[i])], "depth_input": [wandb.Image(imgs_depth_input[i])]})
+
+            # util_vis.dump_images(opt, var_viz.idx, "image_input", var_viz.rgb_input_map, masks=None, from_range=(0, 1), folder=vis_folder)
+            # util_vis.dump_images(opt, var_viz.idx, "mask_input", var_viz.mask_input_map, folder=vis_folder)
+            # util_vis.dump_depths(opt, var_viz.idx, "depth_est", var_viz.depth_pred, var_viz.mask_input_map, rescale=True, folder=vis_folder)
+            # util_vis.dump_depths(opt, var_viz.idx, "depth_input", var_viz.depth_input_map, var_viz.mask_input_map, rescale=True, folder=vis_folder)
             if 'seen_points_pred' in var_viz and 'seen_points_gt' in var_viz:
-                util_vis.dump_pointclouds_compare(opt, var_viz.idx, "seen_surface", var_viz.seen_points_pred, var_viz.seen_points_gt, folder=vis_folder)
+                # util_vis.dump_pointclouds_compare(opt, var_viz.idx, "seen_surface", var_viz.seen_points_pred, var_viz.seen_points_gt, folder=vis_folder)
+                seen_surface_pcds = util_vis.get_pointclouds_compare(opt, var_viz.idx, "seen_surface", var_viz.seen_points_pred, var_viz.seen_points_gt)
+                for i in range(len(seen_surface_pcds)):
+                    wandb.log({"seen_surface": [wandb.Object3D(seen_surface_pcds[i])]})
         self.graph.train()
 
     def summarize_loss(self, opt, var, loss, non_act_loss_key=[]):

@@ -433,9 +433,6 @@ class Runner():
         # use make_grid to create a grid of images
 
         #make a 2 x 2 grid of images var.rgb_input_map, var.mask_input_map, var.depth_pred, var.depth_input_map
-
-        grid = make_grid([var.rgb_input_map[0], var.mask_input_map[0], var.depth_pred[0], var.depth_input_map[0]], nrow=2)
-
         
         # save the results
 

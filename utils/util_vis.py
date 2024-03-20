@@ -217,6 +217,18 @@ def dump_attentions(opt, idx, name, attn_vis, folder='dump'):
         fname = "{}/{}/{}_{}.gif".format(opt.output_path, folder, idx[i], name)
         img_list_pil[0].save(fname, format='GIF', append_images=img_list_pil[1:], save_all=True, duration=50, loop=0)
 
+def get_attentions_wandb(opt, attn_vis):
+
+    images = torch.stack(attn_vis, dim=0)
+    num_H, num_W = num_vis or opt.tb.num_images
+    image_grid = torchvision.utils.make_grid(images, nrow=num_W, pad_value=1.)
+
+    return image_grid
+    # for i in range(len(idx)):
+    #     img_list_pil = [Image.fromarray((img*255).astype(np.uint8)).convert('RGB') for img in attn_vis[i]]
+    #     fname = "{}/{}/{}_{}.gif".format(opt.output_path, folder, idx[i], name)
+    #     img_list_pil[0].save(fname, format='GIF', append_images=img_list_pil[1:], save_all=True, duration=50, loop=0)
+
 def get_heatmap(opt, gray, cmap): # [N, H, W]
     color = plt.get_cmap(cmap)(gray.numpy())
     color = torch.from_numpy(color[..., :3]).permute(0, 3, 1, 2).contiguous().float() # [N, 3, H, W]
@@ -229,6 +241,14 @@ def dump_meshes(opt, idx, name, meshes, folder='dump'):
             mesh.export(fname)
         except:
             print('Mesh is empty!')
+
+# def get_meshes_pcd_wandb(opt, idx, name, meshes, folder='dump'):
+#     for i, mesh in zip(idx, meshes):
+#         fname = "{}/{}/{}_{}.ply".format(opt.output_path, folder, i, name)
+#         try:
+#             mesh.export(fname)
+#         except:
+#             print('Mesh is empty!')
 
 def dump_meshes_viz(opt, idx, name, meshes, save_frames=True, folder='dump'):
     for i, mesh in zip(idx, meshes):
@@ -335,6 +355,27 @@ def dump_pointclouds(opt, idx, name, pcs, colors, folder='dump', colormap='jet')
         pc_color = trimesh.points.PointCloud(vertices=pc, colors=color)
         fname = "{}/{}/{}_{}.ply".format(opt.output_path, folder, i, name)
         pc_color.export(fname)
+
+def get_pointclouds(opt, idx, pcs, colors, colormap='jet'):
+
+    all_pc_colors = []
+    for i, pc, color in zip(idx, pcs, colors):
+        pc = pc.cpu().numpy()   # [N, 3]
+        color = color.cpu().numpy()   # [N, 3] or [N, 1]
+        # convert scalar color to rgb with colormap
+        if color.shape[1] == 1:
+            # single channel color in numpy between [0, 1] to rgb
+            color = plt.get_cmap(colormap)(color[:, 0])
+            color = (color * 255).astype(np.uint8)
+
+        pc_with_color = np.concatenate([pc, color], axis=1)
+
+        all_pc_colors.append(pc_with_color)
+
+    return all_pc_colors
+        # pc_color = trimesh.points.PointCloud(vertices=pc, colors=color)
+        # fname = "{}/{}/{}_{}.ply".format(opt.output_path, folder, i, name)
+        # pc_color.export(fname)
 
 @torch.no_grad()
 def vis_pointcloud(opt, vis, step, split, pred, GT=None):

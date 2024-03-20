@@ -282,7 +282,7 @@ class Runner():
         self.train_metric_logger.update(loss=loss.all)
         if opt.device == 0: 
             self.graph.eval()
-            if (self.it) % opt.freq.vis == 0: self.visualize(opt, var, split="train")
+            # if (self.it) % opt.freq.vis == 0: self.visualize(opt, var, split="train")
             if (self.it) % opt.freq.ckpt_latest == 0 and not opt.debug: 
                 self.save_checkpoint(opt, ep=self.ep, it=self.it, best_val=self.best_val, best_ep=self.best_ep, latest=True)
             if (self.it) % opt.freq.scalar == 0 and not opt.debug: 
@@ -305,17 +305,46 @@ class Runner():
             eval_3D.eval_metrics(opt, var_viz, self.graph.module.impl_network, vis_only=True)
             vis_folder = "vis_log/iter_{}".format(self.it)
             os.makedirs("{}/{}".format(opt.output_path, vis_folder), exist_ok=True)
-            util_vis.dump_images(opt, var_viz.idx, "image_input", var_viz.rgb_input_map, masks=None, from_range=(0, 1), folder=vis_folder)
-            util_vis.dump_images(opt, var_viz.idx, "mask_input", var_viz.mask_input_map, folder=vis_folder)
-            util_vis.dump_meshes_viz(opt, var_viz.idx, "mesh_viz", var_viz.mesh_pred, folder=vis_folder)
+
+            input_grid = util_vis.get_wandb_image(opt, "image_input_map", var_viz.rgb_input_map, masks=None, from_range=(0, 1))
+            mask_grid = util_vis.get_wandb_image(opt, "mask_input_map", var_viz.mask_input_map)
+            wandb.log({"image_input": wandb.Image(input_grid)})
+            wandb.log({"mask_input": wandb.Image(mask_grid)})
+
+            # util_vis.dump_images(opt, var_viz.idx, "image_input", var_viz.rgb_input_map, masks=None, from_range=(0, 1), folder=vis_folder)
+            # util_vis.dump_images(opt, var_viz.idx, "mask_input", var_viz.mask_input_map, folder=vis_folder)
+            # util_vis.dump_meshes_viz(opt, var_viz.idx, "mesh_viz", var_viz.mesh_pred, folder=vis_folder)
+
+            seen_surface_pcds = util_vis.get_pointclouds_compare(opt, var_viz.idx, "pointcloud compare train", var.dpc_pred, var.dpc.points)
+            for i in range(len(seen_surface_pcds)):
+                wandb.log({"pointcloud compare train": [wandb.Object3D(seen_surface_pcds[i])]})
+            
+            # pcds_pred = utils_vis.get_meshes_pcd_wandb(opt, "mesh_pred", var_viz.dpc_pred)
+
+            pcds_pred = var_viz.dpc_pred
+            for i in range(len(pcds_pred)):
+                wandb.log({"mesh_pred": [wandb.Object3D(pcds_pred[i])]})
+            
             if 'depth_pred' in var_viz:
-                util_vis.dump_depths(opt, var_viz.idx, "depth_est", var_viz.depth_pred, var_viz.mask_input_map, rescale=True, folder=vis_folder)
+                # util_vis.dump_depths(opt, var_viz.idx, "depth_est", var_viz.depth_pred, var_viz.mask_input_map, rescale=True, folder=vis_folder)
+                depth_grid = util_vis.get_wandb_image(opt, "depth_est", var_viz.depth_pred)
+                wandb.log({"depth_est": wandb.Image(depth_grid)})
+            
             if 'depth_input_map' in var_viz:
-                util_vis.dump_depths(opt, var_viz.idx, "depth_input", var_viz.depth_input_map, var_viz.mask_input_map, rescale=True, folder=vis_folder)
+
+                depth_input_grid = util_vis.get_wandb_image(opt, "depth_input_map", var_viz.depth_input_map)
+                wandb.log({"depth_input": wandb.Image(depth_input_grid)})
+                
+                # util_vis.dump_depths(opt, var_viz.idx, "depth_input", var_viz.depth_input_map, var_viz.mask_input_map, rescale=True, folder=vis_folder)
             if 'attn_vis' in var_viz:
-                util_vis.dump_attentions(opt, var_viz.idx, "attn", var_viz.attn_vis, folder=vis_folder)
+                util_vis.dump_attentions(opt, var_viz.attn_vis)
+                wandb.log({"attn": [wandb.Image(var_viz.attn_vis)]})
+                # img_attn = util_vis.get_attentions_wandb(opt, "attn", var_viz.attn_vis)
             if 'gt_surf_points' in var_viz and 'seen_points' in var_viz:
-                util_vis.dump_pointclouds_compare(opt, var_viz.idx, "seen_surface", var_viz.seen_points, var_viz.gt_surf_points, folder=vis_folder)
+                seen_surface_pcds = util_vis.get_pointclouds_compare(opt, var_viz.idx, "seen_surface train", var_viz.seen_points, var_viz.gt_surf_points)
+                for i in range(len(seen_surface_pcds)):
+                    wandb.log({"seen_surface train": [wandb.Object3D(seen_surface_pcds[i])]})
+                # util_vis.dump_pointclouds_compare(opt, var_viz.idx, "seen_surface", var_viz.seen_points, var_viz.gt_surf_points, folder=vis_folder)
 
     def summarize_loss(self, opt, var, loss, non_act_loss_key=[]):
         loss_all = 0.
@@ -397,7 +426,7 @@ class Runner():
                         var_viz = edict(deepcopy(self.viz_data[i]))
                         var_viz = self.evaluate_batch(opt, var_viz, ep, it, single_gpu=True)
                         eval_3D.eval_metrics(opt, var_viz, self.graph.module.impl_network, vis_only=True)
-                        # self.visualize(opt, var_viz, step=ep, split="eval")
+                        self.visualize(opt, var_viz, step=ep, split="eval")
                         self.dump_results(opt, var_viz, ep, train=True)
                     # write html that organizes the results
                     util_vis.create_gif_html(os.path.join(opt.output_path, "vis_{}".format(ep)), 
@@ -594,6 +623,12 @@ class Runner():
             depth_input_grid = util_vis.get_wandb_image(opt, "depth_input_map", var.depth_input_map)
             wandb.log({"depth_input": wandb.Image(depth_input_grid)})
 
+
+        #Visualize meshes
+
+        # util_vis.dump_meshes(opt, var.idx, "mesh", var.mesh_pred, folder=current_folder)
+        # util_vis.dump_meshes_viz(opt, var.idx, "mesh_viz", var.mesh_pred, folder=current_folder) # image frames + gifs
+
     @torch.no_grad()
     def dump_results(self, opt, var, ep, write_new=False, train=False):
         # create the dir
@@ -607,22 +642,59 @@ class Runner():
             pose_input = var.pose_gt
         else:
             pose_input = None
-        util_vis.dump_images(opt, var.idx, "image_input", var.rgb_input_map, masks=None, from_range=(0, 1), poses=pose_input, folder=current_folder)
-        util_vis.dump_images(opt, var.idx, "mask_input", var.mask_input_map, folder=current_folder)
-        util_vis.dump_meshes(opt, var.idx, "mesh", var.mesh_pred, folder=current_folder)
-        util_vis.dump_meshes_viz(opt, var.idx, "mesh_viz", var.mesh_pred, folder=current_folder) # image frames + gifs
+        # util_vis.dump_images(opt, var.idx, "image_input", var_viz.rgb_input_map, masks=None, from_range=(0, 1), poses=pose_input, folder=current_folder)
+        # util_vis.dump_images(opt, var.idx, "mask_input", var_viz.mask_input_map, folder=current_folder)
+
+        input_grid = util_vis.get_wandb_image(opt, "image_input_map", var_viz.rgb_input_map, masks=None, from_range=(0, 1))
+        mask_grid = util_vis.get_wandb_image(opt, "mask_input_map", var_viz.mask_input_map)
+
+        wandb.log({"image_input_val": wandb.Image(input_grid)})
+        wandb.log({"mask_input_val": wandb.Image(mask_grid)})
+        
+
+        # util_vis.dump_meshes(opt, var.idx, "mesh", var.mesh_pred, folder=current_folder)
+        # util_vis.dump_meshes_viz(opt, var.idx, "mesh_viz", var.mesh_pred, folder=current_folder) # image frames + gifs
+
+        pcds_pred = var_viz.dpc_pred
+        for i in range(len(pcds_pred)):
+            wandb.log({"mesh_pred": [wandb.Object3D(pcds_pred[i])]})
+            
         if 'depth_pred' in var:
-            util_vis.dump_depths(opt, var.idx, "depth_est", var.depth_pred, var.mask_input_map, rescale=True, folder=current_folder)
+
+            depth_grid = util_vis.get_wandb_image(opt, "depth_est", var_viz.depth_pred)
+            wandb.log({"depth_est_val": wandb.Image(depth_grid)})
+            
+            # util_vis.dump_depths(opt, var.idx, "depth_est", var.depth_pred, var.mask_input_map, rescale=True, folder=current_folder)
         if 'depth_input_map' in var:
-            util_vis.dump_depths(opt, var.idx, "depth_input", var.depth_input_map, var.mask_input_map, rescale=True, folder=current_folder)
+            depth_input_grid = util_vis.get_wandb_image(opt, "depth_input_map", var_viz.depth_input_map)
+            wandb.log({"depth_input_val": wandb.Image(depth_input_grid)})
+            
+            # util_vis.dump_depths(opt, var.idx, "depth_input", var.depth_input_map, var.mask_input_map, rescale=True, folder=current_folder)
         if 'gt_surf_points' in var and 'seen_points' in var:
-            util_vis.dump_pointclouds_compare(opt, var.idx, "seen_surface", var.seen_points, var.gt_surf_points, folder=current_folder)
+
+            seen_surface_pcds = util_vis.get_pointclouds_compare(opt, var_viz.idx, "seen_surface val", var_viz.seen_points, var_viz.gt_surf_points)
+            for i in range(len(seen_surface_pcds)):
+                wandb.log({"seen_surface val": [wandb.Object3D(seen_surface_pcds[i])]})
+                
+            # util_vis.dump_pointclouds_compare(opt, var.idx, "seen_surface", var.seen_points, var.gt_surf_points, folder=current_folder)
         if 'attn_vis' in var:
-            util_vis.dump_attentions(opt, var.idx, "attn", var.attn_vis, folder=current_folder)
+
+            util_vis.dump_attentions(opt, var_viz.attn_vis)
+            wandb.log({"attn": [wandb.Image(var_viz.attn_vis)]})
+            
+            # util_vis.dump_attentions(opt, var.idx, "attn", var.attn_vis, folder=current_folder)
         if 'attn_pc' in var:
-            util_vis.dump_pointclouds(opt, var.idx, "attn_pc", var.attn_pc["points"], var.attn_pc["colors"], folder=current_folder)
+            pcds_attn = util_vis.get_pointclouds(opt, var_viz.idx, var_viz.attn_pc["points"], var_viz.attn_pc["colors"])
+
+            for i in range(len(pcds_attn)):
+                wandb.log({"attn_pc": [wandb.Object3D(pcds_attn[i])]})
+            # util_vis.dump_pointclouds(opt, var.idx, "attn_pc", var.attn_pc["points"], var.attn_pc["colors"], folder=current_folder)
         if 'dpc' in var:
-            util_vis.dump_pointclouds_compare(opt, var.idx, "pointclouds_comp", var.dpc_pred, var.dpc.points, folder=current_folder)
+            seen_surface_pcds = util_vis.get_pointclouds_compare(opt, var_viz.idx, "pointcloud compare val", var.dpc_pred, var.dpc.points)
+            for i in range(len(seen_surface_pcds)):
+                wandb.log({"pointcloud compare val": [wandb.Object3D(seen_surface_pcds[i])]})
+
+            # util_vis.dump_pointclouds_compare(opt, var.idx, "pointclouds_comp", var.dpc_pred, var.dpc.points, folder=current_folder)
 
     def save_checkpoint(self, opt, ep=0, it=0, best_val=np.inf, best_ep=1, latest=False, best=False):
         util.save_checkpoint(opt, self, ep=ep, it=it, best_val=best_val, best_ep=best_ep, latest=latest, best=best)

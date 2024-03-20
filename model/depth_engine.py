@@ -436,10 +436,10 @@ class Runner():
         
         # save the results
 
-        imgs_input = utils_vis.get_vis_images(opt, var.idx, "image_input", var.rgb_input_map, masks=None, from_range=(0, 1))
-        imgs_mask = utils_vis.get_vis_images(opt, var.idx, "mask_input", var.mask_input_map)
-        imgs_depth_pred = utils_vis.get_vis_depths(opt, var.idx, "depth_pred", var.depth_pred, var.mask_input_map, rescale=True)
-        imgs_depth_input = utils_vis.get_vis_depths(opt, var.idx, "depth_input", var.depth_input_map, var.mask_input_map, rescale=True)
+        imgs_input = util_vis.get_vis_images(opt, var.idx, "image_input", var.rgb_input_map, masks=None, from_range=(0, 1))
+        imgs_mask = util_vis.get_vis_images(opt, var.idx, "mask_input", var.mask_input_map)
+        imgs_depth_pred = util_vis.get_vis_depths(opt, var.idx, "depth_pred", var.depth_pred, var.mask_input_map, rescale=True)
+        imgs_depth_input = util_vis.get_vis_depths(opt, var.idx, "depth_input", var.depth_input_map, var.mask_input_map, rescale=True)
 
         for i in range(len(imgs_input)):
             wandb.log({"image_input": [wandb.Image(imgs_input[i])], "mask_input": [wandb.Image(imgs_mask[i])]})
@@ -484,15 +484,15 @@ class Runner():
             # util_vis.dump_depths(opt, var.idx, "depth_gt_aligned", depth_vis_gt.clamp(max=1, min=0), None, rescale=False, folder=current_folder)
             # util_vis.dump_depths(opt, var.idx, "depth_pred_aligned", depth_vis_pred.clamp(max=1, min=0), None, rescale=False, folder=current_folder)
 
-            depth_gt_aligned_imgs = utils_vis.get_vis_depths(opt, var.idx, "depth_gt_aligned", depth_vis_gt.clamp(max=1, min=0), None, rescale=False)
-            depth_pred_aligned_imgs = utils_vis.get_vis_depths(opt, var.idx, "depth_pred_aligned", depth_vis_pred.clamp(max=1, min=0), None, rescale=False)
+            depth_gt_aligned_imgs = util_vis.get_vis_depths(opt, var.idx, "depth_gt_aligned", depth_vis_gt.clamp(max=1, min=0), None, rescale=False)
+            depth_pred_aligned_imgs = util_vis.get_vis_depths(opt, var.idx, "depth_pred_aligned", depth_vis_pred.clamp(max=1, min=0), None, rescale=False)
 
             for i in range(len(depth_gt_aligned_imgs)):
                 wandb.log({"depth_gt_aligned": [wandb.Image(depth_gt_aligned_imgs[i])], "depth_pred_aligned": [wandb.Image(depth_pred_aligned_imgs[i])]})
 
             if "mask_eroded" in var and "rmse" in var:
                 # util_vis.dump_images(opt, var.idx, "image_eroded", var.rgb_input_map, masks=var.mask_eroded, metrics=var.rmse, from_range=(0, 1), folder=current_folder)
-                image_eroded_imgs = utils_vis.get_vis_images(opt, var.idx, "image_eroded", var.rgb_input_map, masks=var.mask_eroded, metrics=var.rmse, from_range=(0, 1))
+                image_eroded_imgs = util_vis.get_vis_images(opt, var.idx, "image_eroded", var.rgb_input_map, masks=var.mask_eroded, metrics=var.rmse, from_range=(0, 1))
                 for i in range(len(image_eroded_imgs)):
                     wandb.log({"image_eroded": [wandb.Image(image_eroded_imgs[i])]})
 

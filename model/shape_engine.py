@@ -679,9 +679,8 @@ class Runner():
                 
             # util_vis.dump_pointclouds_compare(opt, var.idx, "seen_surface", var.seen_points, var.gt_surf_points, folder=current_folder)
         if 'attn_vis' in var:
-
-            util_vis.dump_attentions(opt, var_viz.attn_vis)
-            wandb.log({"attn": [wandb.Image(var_viz.attn_vis)]})
+            util_vis.dump_attentions(opt, var.attn_vis)
+            # wandb.log({"attn": [wandb.Image(var_viz.attn_vis)]})
             
             # util_vis.dump_attentions(opt, var.idx, "attn", var.attn_vis, folder=current_folder)
         if 'attn_pc' in var:

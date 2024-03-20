@@ -217,13 +217,18 @@ def dump_attentions(opt, idx, name, attn_vis, folder='dump'):
         fname = "{}/{}/{}_{}.gif".format(opt.output_path, folder, idx[i], name)
         img_list_pil[0].save(fname, format='GIF', append_images=img_list_pil[1:], save_all=True, duration=50, loop=0)
 
-def get_attentions_wandb(opt, attn_vis):
+# def get_attentions_wandb(opt, attn_vis):
 
-    images = torch.stack(attn_vis, dim=0)
-    num_H, num_W = num_vis or opt.tb.num_images
-    image_grid = torchvision.utils.make_grid(images, nrow=num_W, pad_value=1.)
+#     for i in range(len(idx)):
+#         img_list_pil = [Image.fromarray((img*255).astype(np.uint8)).convert('RGB') for img in attn_vis[i]]
+#         fname = "{}/{}/{}_{}.gif".format(opt.output_path, folder, idx[i], name)
+#         img_list_pil[0].save(fname, format='GIF', append_images=img_list_pil[1:], save_all=True, duration=50, loop=0)
 
-    return image_grid
+#     images = torch.stack(attn_vis, dim=0)
+#     num_H, num_W = num_vis or opt.tb.num_images
+#     image_grid = torchvision.utils.make_grid(images, nrow=num_W, pad_value=1.)
+
+#     return image_grid
     # for i in range(len(idx)):
     #     img_list_pil = [Image.fromarray((img*255).astype(np.uint8)).convert('RGB') for img in attn_vis[i]]
     #     fname = "{}/{}/{}_{}.gif".format(opt.output_path, folder, idx[i], name)

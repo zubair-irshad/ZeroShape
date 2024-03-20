@@ -70,6 +70,24 @@ def dump_images(opt, idx, name, images, masks=None, from_range=(0, 1), poses=Non
         img = Image.fromarray((img*255).astype(np.uint8))
         img.save(fname)
 
+def get_vis_images(opt, idx, name, images, masks=None, from_range=(0, 1), poses=None, metrics=None, cmap="gray"):
+    images = preprocess_vis_image(opt, images, masks=masks, from_range=from_range, cmap=cmap) # [B, 3, H, W]
+    if poses is not None:
+        rots = poses[..., :3]
+        images = torch.stack([draw_pose(opt, image, rot, size=20, width=2) for image, rot in zip(images, rots)], dim=0)
+    if metrics is not None:
+        images = torch.stack([draw_metric(opt, image, metric.item()) for image, metric in zip(images, metrics)], dim=0)
+    images = images.cpu().permute(0, 2, 3, 1).contiguous().numpy() # [B, H, W, 3]
+
+
+    imgs = [Image.fromarray((img*255).astype(np.uint8)) for img in images]
+
+    return imgs
+    # for i, img in zip(idx, images):
+    #     fname = "{}/{}/{}_{}.png".format(opt.output_path, folder, i, name)
+    #     img = Image.fromarray((img*255).astype(np.uint8))
+        # img.save(fname)
+
 def dump_depths(opt, idx, name, depths, masks=None, rescale=False, folder='dump'):
     if rescale:
         masks = (masks > 0.5).float()
@@ -182,6 +200,25 @@ def dump_pointclouds_compare(opt, idx, name, preds, gts, folder='dump'):
         pc_color = trimesh.points.PointCloud(vertices=pc_vertices, colors=colors)
         fname = "{}/{}/{}_{}.ply".format(opt.output_path, folder, idx[i], name)
         pc_color.export(fname)
+
+def get_pointclouds_compare(opt, idx, name, preds, gts):
+    all_pcds = []
+    for i in range(len(idx)):
+        pred = preds[i].cpu().numpy()   # [N1, 3]
+        gt = gts[i].cpu().numpy()   # [N2, 3]
+        color_pred = np.zeros(pred.shape).astype(np.uint8)
+        color_pred[:, 0] = 255
+        color_gt = np.zeros(gt.shape).astype(np.uint8)
+        color_gt[:, 1] = 255
+        pc_vertices = np.vstack([pred, gt])
+        colors = np.vstack([color_pred, color_gt])
+        #We want to save the pcd as this: Log 3D point clouds and Lidar scenes with bounding boxes. Pass in a NumPy array containing coordinates and colors for the points to render. In the UI, we truncate to 300,000 points.
+        pc_with_color = np.concatenate([pc_vertices, colors], axis=1)
+        all_pcds.append(pc_with_color)
+    return all_pcds
+        # pc_color = trimesh.points.PointCloud(vertices=pc_vertices, colors=colors)
+        # fname = "{}/{}/{}_{}.ply".format(opt.output_path, folder, idx[i], name)
+        # pc_color.export(fname)
 
 def dump_pointclouds(opt, idx, name, pcs, colors, folder='dump', colormap='jet'):
     for i, pc, color in zip(idx, pcs, colors):

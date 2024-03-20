@@ -14,6 +14,7 @@ from utils.eval_depth import DepthMetric
 from copy import deepcopy
 from model.compute_graph import graph_depth
 import wandb
+from torchvision.utils import make_grid
 
 # ============================ main engine for training and evaluation ============================
 
@@ -400,11 +401,11 @@ class Runner():
         for key, value in loss.items():
             if key=="all": continue
             # self.tb.add_scalar("{0}/loss_{1}".format(split, key), value.mean(), step)
-            wandb.log({"{0}/loss_{1}".format(split, key): value.mean()}, step=step)
+            wandb.log({"{0}/loss_{1}".format(split, key): value.mean()})
         if metric is not None:
             for key, value in metric.items():
                 # self.tb.add_scalar("{0}/{1}".format(split, key), value, step)
-                wandb.log({"{0}/{1}".format(split, key): value}, step=step)
+                wandb.log({"{0}/{1}".format(split, key): value})
 
     @torch.no_grad()
     def visualize(self, opt, var, step=0, split="train"):
@@ -415,14 +416,46 @@ class Runner():
         # create the dir
         current_folder = "dump" if train == False else "vis_{}".format(ep)
         os.makedirs("{}/{}/".format(opt.output_path, current_folder), exist_ok=True)
+
+        # use make_grid to create a grid of images
+
+        #make a 2 x 2 grid of images var.rgb_input_map, var.mask_input_map, var.depth_pred, var.depth_input_map
+
+        grid = make_grid([var.rgb_input_map[0], var.mask_input_map[0], var.depth_pred[0], var.depth_input_map[0]], nrow=2)
+
         
         # save the results
-        util_vis.dump_images(opt, var.idx, "image_input", var.rgb_input_map, masks=None, from_range=(0, 1), folder=current_folder)
-        util_vis.dump_images(opt, var.idx, "mask_input", var.mask_input_map, folder=current_folder)
-        util_vis.dump_depths(opt, var.idx, "depth_pred", var.depth_pred, var.mask_input_map, rescale=True, folder=current_folder)
-        util_vis.dump_depths(opt, var.idx, "depth_input", var.depth_input_map, var.mask_input_map, rescale=True, folder=current_folder)
+
+        imgs_input = utils_vis.get_vis_images(opt, var.idx, "image_input", var.rgb_input_map, masks=None, from_range=(0, 1))
+        imgs_mask = utils_vis.get_vis_images(opt, var.idx, "mask_input", var.mask_input_map)
+        imgs_depth_pred = utils_vis.get_vis_depths(opt, var.idx, "depth_pred", var.depth_pred, var.mask_input_map, rescale=True)
+        imgs_depth_input = utils_vis.get_vis_depths(opt, var.idx, "depth_input", var.depth_input_map, var.mask_input_map, rescale=True)
+
+        for i in range(len(imgs_input)):
+            wandb.log({"image_input": [wandb.Image(imgs_input[i])], "mask_input": [wandb.Image(imgs_mask[i])], "depth_pred": [wandb.Image(imgs_depth_pred[i])], "depth_input": [wandb.Image(imgs_depth_input[i])]})
+
+        # util_vis.dump_images(opt, var.idx, "image_input", var.rgb_input_map, masks=None, from_range=(0, 1), folder=current_folder)
+        # util_vis.dump_images(opt, var.idx, "mask_input", var.mask_input_map, folder=current_folder)
+        # util_vis.dump_depths(opt, var.idx, "depth_pred", var.depth_pred, var.mask_input_map, rescale=True, folder=current_folder)
+        # util_vis.dump_depths(opt, var.idx, "depth_input", var.depth_input_map, var.mask_input_map, rescale=True, folder=current_folder)
+
+        #make these images into a grid
+
+
+
+        # wandb.log({"depth_pred": [wandb.Image(var.depth_pred[0].cpu().numpy())]})
+        # wandb.log({"depth_input": [wandb.Image(var.depth_input_map[0].cpu().numpy())]})
+        # wandb.log({"image_input": [wandb.Image(var.rgb_input_map[0].cpu().numpy())]})
+        # wandb.log({"mask_input": [wandb.Image(var.mask_input_map[0].cpu().numpy())]})
         if 'seen_points_pred' in var and 'seen_points_gt' in var:
-            util_vis.dump_pointclouds_compare(opt, var.idx, "seen_surface", var.seen_points_pred, var.seen_points_gt, folder=current_folder)
+            # util_vis.dump_pointclouds_compare(opt, var.idx, "seen_surface", var.seen_points_pred, var.seen_points_gt)
+            pcds_vis = utils.get_pointclouds_compare(opt, var.idx, "seen_surface", var.seen_points_pred, var.seen_points_gt)
+            
+            for i in range(len(pcds_vis)):
+                wandb.log({"seen_surface": [wandb.Object3D(pcds_vis[i])]})
+            #log pointclouds to wandb as wandb.Object3D()
+
+            # wandb.log({"seen_surface": [wandb.Object3D(var.seen_points_pred[0].cpu().numpy())]})
         
         if "depth_pred_aligned" in var:
             # get the max and min for the depth map
@@ -436,10 +469,21 @@ class Runner():
             depth_vis_pred = depth_vis_pred * mask + (1 - mask)
             depth_vis_gt = (var.depth_input_map - depth_min_gt.view(batch_size, 1, 1, 1)) / (depth_max_gt - depth_min_gt).view(batch_size, 1, 1, 1)
             depth_vis_gt = depth_vis_gt * mask + (1 - mask)
-            util_vis.dump_depths(opt, var.idx, "depth_gt_aligned", depth_vis_gt.clamp(max=1, min=0), None, rescale=False, folder=current_folder)
-            util_vis.dump_depths(opt, var.idx, "depth_pred_aligned", depth_vis_pred.clamp(max=1, min=0), None, rescale=False, folder=current_folder)
+
+            # util_vis.dump_depths(opt, var.idx, "depth_gt_aligned", depth_vis_gt.clamp(max=1, min=0), None, rescale=False, folder=current_folder)
+            # util_vis.dump_depths(opt, var.idx, "depth_pred_aligned", depth_vis_pred.clamp(max=1, min=0), None, rescale=False, folder=current_folder)
+
+            depth_gt_aligned_imgs = utils_vis.get_vis_depths(opt, var.idx, "depth_gt_aligned", depth_vis_gt.clamp(max=1, min=0), None, rescale=False)
+            depth_pred_aligned_imgs = utils_vis.get_vis_depths(opt, var.idx, "depth_pred_aligned", depth_vis_pred.clamp(max=1, min=0), None, rescale=False)
+
+            for i in range(len(depth_gt_aligned_imgs)):
+                wandb.log({"depth_gt_aligned": [wandb.Image(depth_gt_aligned_imgs[i])], "depth_pred_aligned": [wandb.Image(depth_pred_aligned_imgs[i])]})
+
             if "mask_eroded" in var and "rmse" in var:
-                util_vis.dump_images(opt, var.idx, "image_eroded", var.rgb_input_map, masks=var.mask_eroded, metrics=var.rmse, from_range=(0, 1), folder=current_folder)
+                # util_vis.dump_images(opt, var.idx, "image_eroded", var.rgb_input_map, masks=var.mask_eroded, metrics=var.rmse, from_range=(0, 1), folder=current_folder)
+                image_eroded_imgs = utils_vis.get_vis_images(opt, var.idx, "image_eroded", var.rgb_input_map, masks=var.mask_eroded, metrics=var.rmse, from_range=(0, 1))
+                for i in range(len(image_eroded_imgs)):
+                    wandb.log({"image_eroded": [wandb.Image(image_eroded_imgs[i])]})
 
     def save_checkpoint(self, opt, ep=0, it=0, best_val=np.inf, best_ep=1, latest=False, best=False):
         util.save_checkpoint(opt, self, ep=ep, it=it, best_val=best_val, best_ep=best_ep, latest=latest, best=best)

@@ -316,7 +316,7 @@ class Runner():
             # util_vis.dump_images(opt, var_viz.idx, "mask_input", var_viz.mask_input_map, folder=vis_folder)
             # util_vis.dump_meshes_viz(opt, var_viz.idx, "mesh_viz", var_viz.mesh_pred, folder=vis_folder)
 
-            seen_surface_pcds = util_vis.get_pointclouds_compare(opt, var_viz.idx, "pointcloud compare train", var.dpc_pred, var.dpc.points)
+            seen_surface_pcds = util_vis.get_pointclouds_compare(opt, var_viz.idx, "pointcloud compare train", var_viz.dpc_pred, var_viz.dpc.points)
             for i in range(len(seen_surface_pcds)):
                 wandb.log({"pointcloud compare train": [wandb.Object3D(seen_surface_pcds[i])]})
             

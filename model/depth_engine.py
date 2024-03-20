@@ -31,7 +31,7 @@ class Runner():
                 if "embedding" in filename: shutil.rmtree(os.path.join(opt.output_path, filename))
         if opt.device == 0: 
             os.makedirs(opt.output_path,exist_ok=True)
-            wandb.init(project="zero_shape_depth_estimation")
+            wandb.init(project="ZeroSgape")
         setup(opt.device, opt.world_size, opt.port)
         opt.batch_size = opt.batch_size // opt.world_size
     

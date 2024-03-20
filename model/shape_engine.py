@@ -14,7 +14,7 @@ from utils.util import print_eval, setup, cleanup
 from utils.util import EasyDict as edict
 from copy import deepcopy
 from model.compute_graph import graph_shape
-
+import wandb
 # ============================ main engine for training and evaluation ============================
 
 class Runner():
@@ -29,6 +29,7 @@ class Runner():
                 if "embedding" in filename: shutil.rmtree(os.path.join(opt.output_path, filename))
         if opt.device == 0: 
             os.makedirs(opt.output_path,exist_ok=True)
+            wandb.init(project="ZeroSgape")
         setup(opt.device, opt.world_size, opt.port)
         opt.batch_size = opt.batch_size // opt.world_size
     

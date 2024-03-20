@@ -253,7 +253,8 @@ class Runner():
             imgs_depth_input = util_vis.get_vis_depths(opt, var_viz.idx, "depth_input", var_viz.depth_input_map, var_viz.mask_input_map, rescale=True)
 
             for i in range(len(imgs_input)):
-                wandb.log({"image_input": [wandb.Image(imgs_input[i])], "mask_input": [wandb.Image(imgs_mask[i])], "depth_pred": [wandb.Image(imgs_depth_pred[i])], "depth_input": [wandb.Image(imgs_depth_input[i])]})
+                wandb.log({"image_input": [wandb.Image(imgs_input[i])], "mask_input": [wandb.Image(imgs_mask[i])]})
+                wandb.log({"depth_pred": [wandb.Image(imgs_depth_pred[i])], "depth_input": [wandb.Image(imgs_depth_input[i])]})
 
             # util_vis.dump_images(opt, var_viz.idx, "image_input", var_viz.rgb_input_map, masks=None, from_range=(0, 1), folder=vis_folder)
             # util_vis.dump_images(opt, var_viz.idx, "mask_input", var_viz.mask_input_map, folder=vis_folder)
@@ -444,7 +445,8 @@ class Runner():
         imgs_depth_input = utils_vis.get_vis_depths(opt, var.idx, "depth_input", var.depth_input_map, var.mask_input_map, rescale=True)
 
         for i in range(len(imgs_input)):
-            wandb.log({"image_input": [wandb.Image(imgs_input[i])], "mask_input": [wandb.Image(imgs_mask[i])], "depth_pred": [wandb.Image(imgs_depth_pred[i])], "depth_input": [wandb.Image(imgs_depth_input[i])]})
+            wandb.log({"image_input": [wandb.Image(imgs_input[i])], "mask_input": [wandb.Image(imgs_mask[i])]})
+            wandb.log({"depth_pred": [wandb.Image(imgs_depth_pred[i])], "depth_input": [wandb.Image(imgs_depth_input[i])]})
 
         # util_vis.dump_images(opt, var.idx, "image_input", var.rgb_input_map, masks=None, from_range=(0, 1), folder=current_folder)
         # util_vis.dump_images(opt, var.idx, "mask_input", var.mask_input_map, folder=current_folder)

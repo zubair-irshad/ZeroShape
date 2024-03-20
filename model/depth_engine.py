@@ -460,7 +460,7 @@ class Runner():
         # wandb.log({"mask_input": [wandb.Image(var.mask_input_map[0].cpu().numpy())]})
         if 'seen_points_pred' in var and 'seen_points_gt' in var:
             # util_vis.dump_pointclouds_compare(opt, var.idx, "seen_surface", var.seen_points_pred, var.seen_points_gt)
-            pcds_vis = utils.get_pointclouds_compare(opt, var.idx, "seen_surface", var.seen_points_pred, var.seen_points_gt)
+            pcds_vis = util_vis.get_pointclouds_compare(opt, var.idx, "seen_surface", var.seen_points_pred, var.seen_points_gt)
             
             for i in range(len(pcds_vis)):
                 wandb.log({"seen_surface": [wandb.Object3D(pcds_vis[i])]})

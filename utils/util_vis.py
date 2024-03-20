@@ -64,13 +64,11 @@ def viz_inv_depth(inv_depth, normalizer=None, percentile=95,
         # if len(inv_depth.shape) == 3:
         #     inv_depth = inv_depth.squeeze(0)
         inv_depth = inv_depth.detach().cpu().numpy()
-    print("inv_depth", inv_depth.shape)
     cm = get_cmap(colormap)
     if normalizer is None:
         normalizer = np.percentile(
             inv_depth[inv_depth > 0] if filter_zeros else inv_depth, percentile)
     inv_depth /= (normalizer + 1e-6)
-    print("inv depth", inv_depth.shape)
     return cm(np.clip(inv_depth, 0., 1.0))[:, :, :3]
 
 os.environ['PYOPENGL_PLATFORM'] = 'egl'

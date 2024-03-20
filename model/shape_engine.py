@@ -426,7 +426,7 @@ class Runner():
                         var_viz = edict(deepcopy(self.viz_data[i]))
                         var_viz = self.evaluate_batch(opt, var_viz, ep, it, single_gpu=True)
                         eval_3D.eval_metrics(opt, var_viz, self.graph.module.impl_network, vis_only=True)
-                        self.visualize(opt, var_viz, step=ep, split="eval")
+                        # self.visualize(opt, var_viz, step=ep, split="eval")
                         self.dump_results(opt, var_viz, ep, train=True)
                     # write html that organizes the results
                     util_vis.create_gif_html(os.path.join(opt.output_path, "vis_{}".format(ep)), 

@@ -334,8 +334,9 @@ class Runner():
                 
                 # util_vis.dump_depths(opt, var_viz.idx, "depth_input", var_viz.depth_input_map, var_viz.mask_input_map, rescale=True, folder=vis_folder)
             if 'attn_vis' in var_viz:
-                util_vis.dump_attentions(opt, var_viz.attn_vis)
-                wandb.log({"attn": [wandb.Image(var_viz.attn_vis)]})
+                # util_vis.dump_attentions(opt, var_viz.attn_vis)
+                util_vis.dump_attentions(opt, var.idx, "attn", var_viz.attn_vis, folder=current_folder)
+                # wandb.log({"attn": [wandb.Image(var_viz.attn_vis)]})
                 # img_attn = util_vis.get_attentions_wandb(opt, "attn", var_viz.attn_vis)
             if 'gt_surf_points' in var_viz and 'seen_points' in var_viz:
                 seen_surface_pcds = util_vis.get_pointclouds_compare(opt, var_viz.idx, "seen_surface train", var_viz.seen_points, var_viz.gt_surf_points)

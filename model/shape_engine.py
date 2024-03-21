@@ -405,13 +405,24 @@ class Runner():
                     
                 # write to file
                 if not training: 
-                    full_results_file.write("\n")
-                    full_results_file.write("{:d}".format(var.idx.item()))
-                    full_results_file.write("\t{:.4f}".format((var.cd_acc.item() + var.cd_comp.item()) / 2))
-                    full_results_file.write("\t{:.4f}".format(var.cd_acc.item()))
-                    full_results_file.write("\t{:.4f}".format(var.cd_comp.item()))
-                    full_results_file.write("\t" + "\t".join(["{:.4f}".format(var.f_score[0][i].item()) for i in range(len(opt.eval.f_thresholds))]))     
-                    full_results_file.flush()
+
+                    #var.idx.item it says only one element tensors can be converted to python scalrs, modify the code accordingly
+                    for i in range(len(var.idx)):
+                        full_results_file.write("\n")
+                        full_results_file.write("{:d}".format(var.idx[i].item()))
+                        full_results_file.write("\t{:.4f}".format((var.cd_acc[i].item() + var.cd_comp[i].item()) / 2))
+                        full_results_file.write("\t{:.4f}".format(var.cd_acc[i].item()))
+                        full_results_file.write("\t{:.4f}".format(var.cd_comp[i].item()))
+                        full_results_file.write("\t" + "\t".join(["{:.4f}".format(var.f_score[i][j].item()) for j in range(len(opt.eval.f_thresholds))]))     
+                        full_results_file.flush()
+
+                    # full_results_file.write("\n")
+                    # full_results_file.write("{:d}".format(var.idx.item()))
+                    # full_results_file.write("\t{:.4f}".format((var.cd_acc.item() + var.cd_comp.item()) / 2))
+                    # full_results_file.write("\t{:.4f}".format(var.cd_acc.item()))
+                    # full_results_file.write("\t{:.4f}".format(var.cd_comp.item()))
+                    # full_results_file.write("\t" + "\t".join(["{:.4f}".format(var.f_score[0][i].item()) for i in range(len(opt.eval.f_thresholds))]))     
+                    # full_results_file.flush()
                 
                 # dump the result if in eval mode
                 if not training: 

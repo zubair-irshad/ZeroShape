@@ -375,7 +375,8 @@ class Runner():
         # result file on the fly
         if not training: 
             # assert opt.device == 0
-            if opt.device == 0: print("EVALUATION START"):
+            if opt.device == 0: 
+                print("EVALUATION START")
                 full_results_file = open(os.path.join(opt.output_path, '{}_full_results.txt'.format(opt.data.dataset_test)), 'w')
                 full_results_file.write("IND, CD, ACC, COMP, ")
                 full_results_file.write(", ".join(["F-score@{:.2f}".format(opt.eval.f_thresholds[i]*100) for i in range(len(opt.eval.f_thresholds))]))   

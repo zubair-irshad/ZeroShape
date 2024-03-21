@@ -13,7 +13,7 @@ class Dataset(base.Dataset):
     def __init__(self, opt, split="train", load_3D=True):
         super().__init__(opt, split)
         
-        self.path = "data/OmniObject3D"
+        self.path = "/data/OmniObject3D"
         self.opt = opt
         self.load_3D = load_3D
         self.cat_names = [name[:-10] for name in os.listdir(os.path.join(self.path, "lists")) if name.endswith("_test.list")]

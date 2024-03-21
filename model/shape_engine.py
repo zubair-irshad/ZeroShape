@@ -357,6 +357,165 @@ class Runner():
         loss.update(all=loss_all)
         return loss
 
+
+# =================================================== set up evaluation =========================================================
+
+    @torch.no_grad()
+    def evaluate_metrics(self, opt, ep, training=False):
+        self.graph.eval()
+        
+        # lists for metrics
+        cd_accs = []
+        cd_comps = []
+        f_scores = []
+        cat_indices = []
+        loss_eval = edict()
+        metric_eval = dict(dist_acc=0., dist_cov=0.)
+        eval_metric_logger = util.MetricLogger(delimiter="  ")
+        
+        # # result file on the fly
+        # if not training: 
+        #     # assert opt.device == 0
+        #     if opt.device == 0: 
+        #         print("EVALUATION START")
+        #         full_results_file = open(os.path.join(opt.output_path, '{}_full_results.txt'.format(opt.data.dataset_test)), 'w')
+        #         full_results_file.write("IND, CD, ACC, COMP, ")
+        #         full_results_file.write(", ".join(["F-score@{:.2f}".format(opt.eval.f_thresholds[i]*100) for i in range(len(opt.eval.f_thresholds))]))   
+        
+        # dataloader on the test set
+        with torch.cuda.device(opt.device):
+            for it, batch in enumerate(self.test_loader):
+                
+                # inference the model
+                var = edict(batch)
+                var = self.evaluate_batch(opt, var, ep, it, single_gpu=False)
+
+                # record CD for evaluation
+                dist_acc, dist_cov = eval_3D.eval_metrics(opt, var, self.graph.module.impl_network)
+                
+                # accumulate the scores
+                cd_accs.append(var.cd_acc)
+                cd_comps.append(var.cd_comp)
+                f_scores.append(var.f_score)
+                cat_indices.append(var.category_label)
+                eval_metric_logger.update(ACC=dist_acc)
+                eval_metric_logger.update(COMP=dist_cov)
+                eval_metric_logger.update(CD=(dist_acc+dist_cov) / 2)
+                
+                if opt.device == 0 and it % opt.freq.print_eval == 0: 
+                    print('[{}] '.format(datetime.datetime.now().time()), end='')
+                    print(f'Eval Iter {it}/{len(self.test_loader)} @ EP {ep}: {eval_metric_logger}')
+            
+            # collect the eval results into tensors
+            cd_accs = torch.cat(cd_accs, dim=0)
+            cd_comps = torch.cat(cd_comps, dim=0)
+            f_scores = torch.cat(f_scores, dim=0)
+            cat_indices = torch.cat(cat_indices, dim=0)
+
+        if opt.world_size > 1:
+            # empty tensors for gathering
+            cd_accs_all = [torch.zeros_like(cd_accs).to(opt.device) for _ in range(opt.world_size)]
+            cd_comps_all = [torch.zeros_like(cd_comps).to(opt.device) for _ in range(opt.world_size)]
+            f_scores_all = [torch.zeros_like(f_scores).to(opt.device) for _ in range(opt.world_size)]
+            cat_indices_all = [torch.zeros_like(cat_indices).long().to(opt.device) for _ in range(opt.world_size)]
+            
+            # gather the metrics
+            torch.distributed.barrier()
+            torch.distributed.all_gather(cd_accs_all, cd_accs)
+            torch.distributed.all_gather(cd_comps_all, cd_comps)
+            torch.distributed.all_gather(f_scores_all, f_scores)
+            torch.distributed.all_gather(cat_indices_all, cat_indices)
+            cd_accs_all = torch.cat(cd_accs_all, dim=0)
+            cd_comps_all = torch.cat(cd_comps_all, dim=0)
+            f_scores_all = torch.cat(f_scores_all, dim=0)
+            cat_indices_all = torch.cat(cat_indices_all, dim=0)
+        else:
+            cd_accs_all = cd_accs
+            cd_comps_all = cd_comps
+            f_scores_all = f_scores
+            cat_indices_all = cat_indices
+        # handle last batch, if any
+        if len(self.test_loader.sampler) * opt.world_size < len(self.test_data):
+            cd_accs_all = [cd_accs_all]
+            cd_comps_all = [cd_comps_all]
+            f_scores_all = [f_scores_all]
+            cat_indices_all = [cat_indices_all]
+            for batch in self.aux_test_loader:
+                # inference the model
+                var = edict(batch)
+                var = self.evaluate_batch(opt, var, ep, it, single_gpu=False)
+
+                # record CD for evaluation
+                dist_acc, dist_cov = eval_3D.eval_metrics(opt, var, self.graph.module.impl_network)
+                # accumulate the scores
+                cd_accs_all.append(var.cd_acc)
+                cd_comps_all.append(var.cd_comp)
+                f_scores_all.append(var.f_score)
+                cat_indices_all.append(var.category_label)
+                
+                # dump the result if in eval mode
+                if not training and opt.device == 0: 
+                    self.dump_results(opt, var, ep, write_new=(it == 0))
+                    
+            cd_accs_all = torch.cat(cd_accs_all, dim=0)
+            cd_comps_all = torch.cat(cd_comps_all, dim=0)
+            f_scores_all = torch.cat(f_scores_all, dim=0)
+            cat_indices_all = torch.cat(cat_indices_all, dim=0)
+
+        assert cd_accs_all.shape[0] == len(self.test_data)
+        if not training: 
+            full_results_file.close()
+        # printout and save the metrics     
+        if opt.device == 0:
+            metric_eval["dist_acc"] = cd_accs_all.mean()
+            metric_eval["dist_cov"] = cd_comps_all.mean()
+
+            # print eval info
+            print_eval(opt, loss=None, chamfer=(metric_eval["dist_acc"],
+                                                metric_eval["dist_cov"]))
+            val_metric = (metric_eval["dist_acc"] + metric_eval["dist_cov"]) / 2
+        
+            if training:
+                # log/visualize results to tb/vis
+                self.log_scalars(opt, var, loss_eval, metric=metric_eval, step=ep, split="eval")
+            
+            if not training:
+                # save the per-cat evaluation metrics if on shapenet
+                per_cat_cd_file = os.path.join(opt.output_path, 'cd_cat.txt')
+                with open(per_cat_cd_file, "w") as outfile:
+                    outfile.write("CD     Acc    Comp   Count Cat\n")
+                    for i in range(opt.data.num_classes_test):
+                        if (cat_indices_all==i).sum() == 0:
+                            continue
+                        acc_i = cd_accs_all[cat_indices_all==i].mean().item()
+                        comp_i = cd_comps_all[cat_indices_all==i].mean().item()
+                        counts_cat = torch.sum(cat_indices_all==i)
+                        cd_i = (acc_i + comp_i) / 2
+                        outfile.write("%.4f %.4f %.4f %5d %s\n" % (cd_i, acc_i, comp_i, counts_cat, self.test_data.label2cat[i]))
+                        
+                # print f_scores
+                f_scores_avg = f_scores_all.mean(dim=0)
+                print('##############################')
+                for i in range(len(opt.eval.f_thresholds)):
+                    print('F-score @ %.2f: %.4f' % (opt.eval.f_thresholds[i]*100, f_scores_avg[i].item()))
+                print('##############################')
+
+                # write to file
+                result_file = os.path.join(opt.output_path, 'quantitative_{}.txt'.format(opt.data.dataset_test))
+                with open(result_file, "w") as outfile:
+                    outfile.write('CD     Acc    Comp \n')
+                    outfile.write('%.4f %.4f %.4f\n' % (val_metric, metric_eval["dist_acc"], metric_eval["dist_cov"]))
+                    for i in range(len(opt.eval.f_thresholds)):
+                        outfile.write('F-score @ %.2f: %.4f\n' % (opt.eval.f_thresholds[i]*100, f_scores_avg[i].item()))
+
+                # write html that organizes the results
+                util_vis.create_gif_html(os.path.join(opt.output_path, "dump_{}".format(opt.data.dataset_test)), 
+                                         os.path.join(opt.output_path, "results_test.html"), skip_every=10)
+                
+            # torch.cuda.empty_cache()
+            return val_metric.item()
+        return float('inf')
+
 # =================================================== set up evaluation =========================================================
 
     @torch.no_grad()

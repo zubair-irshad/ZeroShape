@@ -19,7 +19,7 @@ def main_worker(rank, world_size, port, opt):
     evaluator.restore_checkpoint(opt, best=True, evaluate=True)
     evaluator.setup_visualizer(opt, test=True)
 
-    evaluator.evaluate_metrics(opt, ep=0)
+    evaluator.evaluate(opt, ep=0)
 
 def main():
     print("[{}] (evaluating)".format(sys.argv[0]))

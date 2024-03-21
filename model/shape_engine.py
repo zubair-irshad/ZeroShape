@@ -372,14 +372,14 @@ class Runner():
         metric_eval = dict(dist_acc=0., dist_cov=0.)
         eval_metric_logger = util.MetricLogger(delimiter="  ")
         
-        # result file on the fly
-        if not training: 
-            # assert opt.device == 0
-            if opt.device == 0: 
-                print("EVALUATION START")
-                full_results_file = open(os.path.join(opt.output_path, '{}_full_results.txt'.format(opt.data.dataset_test)), 'w')
-                full_results_file.write("IND, CD, ACC, COMP, ")
-                full_results_file.write(", ".join(["F-score@{:.2f}".format(opt.eval.f_thresholds[i]*100) for i in range(len(opt.eval.f_thresholds))]))   
+        # # result file on the fly
+        # if not training: 
+        #     # assert opt.device == 0
+        #     if opt.device == 0: 
+        #         print("EVALUATION START")
+        #         full_results_file = open(os.path.join(opt.output_path, '{}_full_results.txt'.format(opt.data.dataset_test)), 'w')
+        #         full_results_file.write("IND, CD, ACC, COMP, ")
+        #         full_results_file.write(", ".join(["F-score@{:.2f}".format(opt.eval.f_thresholds[i]*100) for i in range(len(opt.eval.f_thresholds))]))   
         
         # dataloader on the test set
         with torch.cuda.device(opt.device):
@@ -406,16 +406,16 @@ class Runner():
                     print(f'Eval Iter {it}/{len(self.test_loader)} @ EP {ep}: {eval_metric_logger}')
                     
                 # write to file
-                if not training: 
-                    #var.idx.item it says only one element tensors can be converted to python scalrs, modify the code accordingly
-                    for i in range(len(var.idx)):
-                        full_results_file.write("\n")
-                        full_results_file.write("{:d}".format(var.idx[i].item()))
-                        full_results_file.write("\t{:.4f}".format((var.cd_acc[i].item() + var.cd_comp[i].item()) / 2))
-                        full_results_file.write("\t{:.4f}".format(var.cd_acc[i].item()))
-                        full_results_file.write("\t{:.4f}".format(var.cd_comp[i].item()))
-                        full_results_file.write("\t" + "\t".join(["{:.4f}".format(var.f_score[i][j].item()) for j in range(len(opt.eval.f_thresholds))]))     
-                        full_results_file.flush()
+                # if not training: 
+                #     #var.idx.item it says only one element tensors can be converted to python scalrs, modify the code accordingly
+                #     for i in range(len(var.idx)):
+                #         full_results_file.write("\n")
+                #         full_results_file.write("{:d}".format(var.idx[i].item()))
+                #         full_results_file.write("\t{:.4f}".format((var.cd_acc[i].item() + var.cd_comp[i].item()) / 2))
+                #         full_results_file.write("\t{:.4f}".format(var.cd_acc[i].item()))
+                #         full_results_file.write("\t{:.4f}".format(var.cd_comp[i].item()))
+                #         full_results_file.write("\t" + "\t".join(["{:.4f}".format(var.f_score[i][j].item()) for j in range(len(opt.eval.f_thresholds))]))     
+                #         full_results_file.flush()
 
                     # full_results_file.write("\n")
                     # full_results_file.write("{:d}".format(var.idx.item()))

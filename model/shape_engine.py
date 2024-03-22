@@ -463,8 +463,8 @@ class Runner():
             cat_indices_all = torch.cat(cat_indices_all, dim=0)
 
         assert cd_accs_all.shape[0] == len(self.test_data)
-        if not training: 
-            full_results_file.close()
+        # if not training: 
+        #     full_results_file.close()
         # printout and save the metrics     
         if opt.device == 0:
             metric_eval["dist_acc"] = cd_accs_all.mean()
